@@ -287,35 +287,30 @@ func (self Canvas) Thumbnail(width uint, height uint) error {
 
 	ratio = math.Min(float64(self.Width())/float64(width), float64(self.Height())/float64(height))
 
-	if ratio < 1.0 {
-		// Origin image is smaller than the thumbnail image.
-		max := uint(math.Max(float64(width), float64(height)))
+	return self.thumbnail(width, height, ratio)
+}
 
-		// Empty replacement buffer with transparent background.
-		replacement := New()
+// Creates a thumbnail that fits within the given dimensions
+func (self Canvas) Fit(width uint, height uint) error {
 
-		replacement.SetBackgroundColor("none")
+	var ratio float64
 
-		replacement.Blank(max, max)
+	// Normalizing image.
 
-		// Putting original image in the center of the replacement canvas.
-		replacement.AppendCanvas(self, int(int(width-self.Width())/2), int(int(height-self.Height())/2))
+	ratio = math.Max(float64(self.Width())/float64(width), float64(self.Height())/float64(height))
 
-		// Replacing wand
-		C.DestroyMagickWand(self.wand)
+	return self.thumbnail(width, height, ratio)
+}
 
-		self.wand = C.CloneMagickWand(replacement.wand)
+func (self Canvas) thumbnail(width uint, height uint, ratio float64) error {
 
-	} else {
-		// Is bigger, just resizing.
-		err := self.Resize(uint(float64(self.Width())/ratio), uint(float64(self.Height())/ratio))
-		if err != nil {
-			return err
-		}
+	err := self.Resize(uint(float64(self.Width())/ratio), uint(float64(self.Height())/ratio))
+	if err != nil {
+		return err
 	}
 
 	// Now we have an image that we can use to crop the thumbnail from.
-	err := self.Crop(int(int(self.Width()-width)/2), int(int(self.Height()-height)/2), width, height)
+	err = self.Crop(int(int(self.Width()-width)/2), int(int(self.Height()-height)/2), width, height)
 
 	if err != nil {
 		return err
@@ -718,6 +713,21 @@ func (self Canvas) SetHue(factor float64) error {
 	}
 
 	return nil
+}
+
+// Sets the format of a particular image
+func (self Canvas) SetFormat(format string) error {
+	if C.MagickSetImageFormat(self.wand, C.CString(format)) != C.MagickFalse {
+		return fmt.Errorf("Coluld not set format : %s", self.Error())
+	}
+
+	return nil
+}
+
+// Implements direct to memory image formats. It returns the image as a blob
+func (self Canvas) Blob(length *uint) []byte {
+	ptr := C.MagickGetImageBlob(self.wand, (*C.size_t) (unsafe.Pointer(length)))
+    return C.GoBytes(unsafe.Pointer(ptr), C.int(*length))
 }
 
 // Returns a new canvas object.

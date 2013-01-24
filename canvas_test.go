@@ -466,3 +466,41 @@ func TestContrast(t *testing.T) {
 		t.Errorf("Failed to create blank image.")
 	}
 }
+
+func TestSetFormat(t *testing.T) {
+	canvas := New()
+
+	err := canvas.Open("_examples/input/example.png")
+
+	if err == nil {
+		canvas.AutoOrientate()
+
+		canvas.SetQuality(90)
+
+		canvas.SetFormat("JPEG")
+
+		canvas.Write("_examples/output/example_jpeg.jpg")
+	} else {
+		t.Errorf("Error: %s\n", err)
+	}
+
+	canvas.Destroy()
+}
+
+func TestBlob(t *testing.T) {
+	canvas := New()
+	defer canvas.Destroy()
+
+	err := canvas.Open("_examples/input/example.png")
+
+	if err == nil {
+        length := uint(0)
+        blob := canvas.Blob(&length)
+        file, _ := os.OpenFile("_examples/output/example_blob.png", os.O_WRONLY | os.O_CREATE, 0644)
+        defer file.Close()
+        file.Write(blob);
+	} else {
+		t.Errorf("Error: %s\n", err)
+	}
+
+}
